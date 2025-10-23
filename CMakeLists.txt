@@ -5,6 +5,9 @@ project(JustWait VERSION 1.0.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# macOS deployment target
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS deployment version")
+
 # Fetch JUCE
 include(FetchContent)
 FetchContent_Declare(
@@ -59,4 +62,6 @@ target_compile_definitions(JustWait
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0
+        JUCE_COREGRAPHICS_DRAW_ASYNC=1
+        JUCE_DISABLE_COREGRAPHICS_FONT_SMOOTHING=1
 )
