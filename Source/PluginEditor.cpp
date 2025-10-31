@@ -12,22 +12,43 @@ JustWaitAudioProcessorEditor::JustWaitAudioProcessorEditor (JustWaitAudioProcess
     waitMsSlider.setTextValueSuffix(" ms");
     addAndMakeVisible(waitMsSlider);
 
-    // Set up the parameter label
+    // Set up the wait time label
     waitMsLabel.setText("Wait For...", juce::dontSendNotification);
     waitMsLabel.setJustificationType(juce::Justification::centred);
-    waitMsLabel.setFont(juce::Font(20.0f, juce::Font::bold));
+    waitMsLabel.setFont(juce::Font(18.0f, juce::Font::bold));
     addAndMakeVisible(waitMsLabel);
 
-    // Set up the value label (shows current value)
-    valueLabel.setJustificationType(juce::Justification::centred);
-    valueLabel.setFont(juce::Font(16.0f));
-    addAndMakeVisible(valueLabel);
+    // Set up the wait time value label (shows current value)
+    waitMsValueLabel.setJustificationType(juce::Justification::centred);
+    waitMsValueLabel.setFont(juce::Font(14.0f));
+    addAndMakeVisible(waitMsValueLabel);
 
-    // Attach the slider to the parameter
+    // Set up the likelihood slider (knob)
+    likelihoodSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    likelihoodSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    likelihoodSlider.setPopupDisplayEnabled(true, true, this);
+    likelihoodSlider.setTextValueSuffix(" %");
+    addAndMakeVisible(likelihoodSlider);
+
+    // Set up the likelihood label
+    likelihoodLabel.setText("Likelihood", juce::dontSendNotification);
+    likelihoodLabel.setJustificationType(juce::Justification::centred);
+    likelihoodLabel.setFont(juce::Font(18.0f, juce::Font::bold));
+    addAndMakeVisible(likelihoodLabel);
+
+    // Set up the likelihood value label
+    likelihoodValueLabel.setJustificationType(juce::Justification::centred);
+    likelihoodValueLabel.setFont(juce::Font(14.0f));
+    addAndMakeVisible(likelihoodValueLabel);
+
+    // Attach sliders to parameters
     waitMsAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.apvts, "waitMs", waitMsSlider);
 
-    // Update value label when slider changes
+    likelihoodAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.apvts, "likelihood", likelihoodSlider);
+
+    // Update wait time value label when slider changes
     waitMsSlider.onValueChange = [this]()
     {
         auto value = waitMsSlider.getValue();
@@ -35,21 +56,30 @@ JustWaitAudioProcessorEditor::JustWaitAudioProcessorEditor (JustWaitAudioProcess
         // Format the display value
         if (value >= 1000.0f)
         {
-            valueLabel.setText(juce::String(value / 1000.0f, 2) + " s",
-                             juce::dontSendNotification);
+            waitMsValueLabel.setText(juce::String(value / 1000.0f, 2) + " s",
+                                     juce::dontSendNotification);
         }
         else
         {
-            valueLabel.setText(juce::String(static_cast<int>(value)) + " ms",
-                             juce::dontSendNotification);
+            waitMsValueLabel.setText(juce::String(static_cast<int>(value)) + " ms",
+                                     juce::dontSendNotification);
         }
     };
 
-    // Set initial value display
-    waitMsSlider.onValueChange();
+    // Update likelihood value label when slider changes
+    likelihoodSlider.onValueChange = [this]()
+    {
+        auto value = likelihoodSlider.getValue();
+        likelihoodValueLabel.setText(juce::String(static_cast<int>(value)) + " %",
+                                      juce::dontSendNotification);
+    };
 
-    // Set editor size
-    setSize (400, 300);
+    // Set initial value displays
+    waitMsSlider.onValueChange();
+    likelihoodSlider.onValueChange();
+
+    // Set editor size (wider to accommodate two knobs)
+    setSize (500, 300);
 }
 
 JustWaitAudioProcessorEditor::~JustWaitAudioProcessorEditor()
@@ -84,20 +114,36 @@ void JustWaitAudioProcessorEditor::resized()
     bounds.reduce(padding, padding);
 
     // Layout components
-    auto labelHeight = 30;
-    auto knobSize = 150;
+    auto labelHeight = 25;
+    auto valueLabelHeight = 20;
+    auto knobSize = 140;
+    auto spacing = 10;
 
-    // Title label at the top
-    waitMsLabel.setBounds(bounds.removeFromTop(labelHeight));
-    bounds.removeFromTop(10); // spacing
+    // Split the area into two columns
+    auto leftColumn = bounds.removeFromLeft(bounds.getWidth() / 2);
+    auto rightColumn = bounds;
 
-    // Center the knob
-    auto knobBounds = bounds.removeFromTop(knobSize);
-    knobBounds = knobBounds.withSizeKeepingCentre(knobSize, knobSize);
-    waitMsSlider.setBounds(knobBounds);
+    // Layout Wait For knob (left column)
+    leftColumn.removeFromTop(spacing);
+    waitMsLabel.setBounds(leftColumn.removeFromTop(labelHeight));
+    leftColumn.removeFromTop(spacing);
 
-    bounds.removeFromTop(10); // spacing
+    auto waitKnobBounds = leftColumn.removeFromTop(knobSize);
+    waitKnobBounds = waitKnobBounds.withSizeKeepingCentre(knobSize, knobSize);
+    waitMsSlider.setBounds(waitKnobBounds);
 
-    // Value label below the knob
-    valueLabel.setBounds(bounds.removeFromTop(labelHeight));
+    leftColumn.removeFromTop(spacing);
+    waitMsValueLabel.setBounds(leftColumn.removeFromTop(valueLabelHeight));
+
+    // Layout Likelihood knob (right column)
+    rightColumn.removeFromTop(spacing);
+    likelihoodLabel.setBounds(rightColumn.removeFromTop(labelHeight));
+    rightColumn.removeFromTop(spacing);
+
+    auto likelihoodKnobBounds = rightColumn.removeFromTop(knobSize);
+    likelihoodKnobBounds = likelihoodKnobBounds.withSizeKeepingCentre(knobSize, knobSize);
+    likelihoodSlider.setBounds(likelihoodKnobBounds);
+
+    rightColumn.removeFromTop(spacing);
+    likelihoodValueLabel.setBounds(rightColumn.removeFromTop(valueLabelHeight));
 }

@@ -24,10 +24,15 @@ private:
     // UI Components
     juce::Slider waitMsSlider;
     juce::Label waitMsLabel;
-    juce::Label valueLabel;
+    juce::Label waitMsValueLabel;
 
-    // Parameter attachment
+    juce::Slider likelihoodSlider;
+    juce::Label likelihoodLabel;
+    juce::Label likelihoodValueLabel;
+
+    // Parameter attachments
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> waitMsAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> likelihoodAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JustWaitAudioProcessorEditor)
 };

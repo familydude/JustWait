@@ -8,7 +8,9 @@ JustWaitAudioProcessor::JustWaitAudioProcessor()
                      .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       apvts(*this, nullptr, "Parameters", createParameterLayout()),
       currentSamplePosition(0),
-      currentSampleRate(44100.0)
+      currentSampleRate(44100.0),
+      randomGenerator(std::random_device{}()),
+      distribution(0.0f, 1.0f)
 {
 }
 
@@ -31,6 +33,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout JustWaitAudioProcessor::crea
             50.0f                                    // interval (50ms increments)
         ),
         0.0f                                         // default value
+    ));
+
+    // Likelihood parameter: 0-100% in 1% increments
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "likelihood",                                // parameter ID
+        "Likelihood (%)",                            // parameter name
+        juce::NormalisableRange<float>(
+            0.0f,                                    // min value
+            100.0f,                                  // max value
+            1.0f                                     // interval (1% increments)
+        ),
+        100.0f                                       // default value (100% = all notes pass)
     ));
 
     return layout;
@@ -121,20 +135,33 @@ void JustWaitAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     // Clear the output buffer (we're a MIDI effect, no audio processing)
     buffer.clear();
 
-    // Get the wait time parameter value in milliseconds
+    // Get parameter values
     auto waitMs = apvts.getRawParameterValue("waitMs")->load();
+    auto likelihood = apvts.getRawParameterValue("likelihood")->load();
 
     // Convert wait time to samples
     auto delaySamples = static_cast<juce::int64>(waitMs * currentSampleRate / 1000.0);
+
+    // Convert likelihood percentage to 0-1 range
+    auto likelihoodNormalized = likelihood / 100.0f;
 
     // Process incoming MIDI events and add them to the delay queue
     for (const auto metadata : midiMessages)
     {
         auto message = metadata.getMessage();
-        auto samplePosition = currentSamplePosition + metadata.samplePosition;
-        auto scheduledSample = samplePosition + delaySamples;
 
-        delayedEvents.emplace(message, scheduledSample);
+        // Apply probabilistic filtering
+        // Generate random number between 0 and 1
+        float randomValue = distribution(randomGenerator);
+
+        // Only process the event if random value is less than likelihood
+        if (randomValue <= likelihoodNormalized)
+        {
+            auto samplePosition = currentSamplePosition + metadata.samplePosition;
+            auto scheduledSample = samplePosition + delaySamples;
+
+            delayedEvents.emplace(message, scheduledSample);
+        }
     }
 
     // Clear the incoming MIDI buffer

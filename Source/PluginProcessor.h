@@ -2,6 +2,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <queue>
+#include <random>
 
 //==============================================================================
 /**
@@ -73,6 +74,10 @@ private:
 
     juce::int64 currentSamplePosition;
     double currentSampleRate;
+
+    // Random number generation for likelihood
+    std::mt19937 randomGenerator;
+    std::uniform_real_distribution<float> distribution;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JustWaitAudioProcessor)
 };

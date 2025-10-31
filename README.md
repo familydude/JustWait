@@ -1,20 +1,29 @@
 # JustWait - MIDI Delay Plugin
 
-A VST3/AU MIDI effect plugin for Logic Pro and other DAWs that delays MIDI events by a specified time.
+A VST3/AU MIDI effect plugin for Logic Pro and other DAWs that delays MIDI events by a specified time and adds probabilistic note filtering for generative music effects.
 
 ## Features
 
-- **Simple Interface**: Single knob control for easy operation
-- **Wait Time Range**: 0 to 10 seconds (10,000 ms)
-- **Precise Control**: 50 ms increments for accurate timing
-- **MIDI Effect**: Delays all incoming MIDI events (notes, CC, etc.)
+- **Dual Knob Interface**: Intuitive two-knob control for easy operation
+- **Wait Time Range**: 0 to 10 seconds (10,000 ms) in 50 ms increments
+- **Likelihood Control**: 0-100% probability filter for generative effects
+- **MIDI Effect**: Processes all incoming MIDI events (notes, CC, etc.)
+- **Sample-Accurate**: Precise timing using priority queue scheduling
 - **Cross-Platform**: Supports macOS (AU/VST3) and Windows/Linux (VST3)
 
 ## How It Works
 
-JustWait captures all incoming MIDI events and delays them by the specified wait time before passing them to the output. This is useful for:
+JustWait captures all incoming MIDI events and applies two transformations:
 
-- Creating humanized timing effects
+1. **Likelihood Filter**: Each event has a probability (0-100%) of being allowed through. At 100%, all events pass. At 50%, approximately half the events pass randomly. At 0%, no events pass.
+
+2. **Time Delay**: Events that pass the likelihood filter are delayed by the specified wait time before being sent to output.
+
+This combination is useful for:
+
+- Creating generative/probabilistic music patterns
+- Adding humanization and variation to MIDI sequences
+- Creating evolving textures with partial note playback
 - Compensating for latency in your setup
 - Creative rhythmic delay effects
 - Synchronizing MIDI with audio tracks
@@ -66,17 +75,30 @@ After building, the plugin will be automatically copied to your system's plugin 
 
 1. Insert JustWait on a MIDI track or software instrument track
 2. The plugin will appear as a MIDI FX in Logic Pro
-3. Adjust the "Wait For..." knob to set your desired delay time
-4. The value is displayed below the knob in milliseconds or seconds
+3. Adjust the **"Wait For..."** knob (left) to set your desired delay time
+4. Adjust the **"Likelihood"** knob (right) to control the probability of notes playing
+5. Values are displayed below each knob
+
+**Tips:**
+- Set Likelihood to 100% for consistent delay without randomization
+- Lower Likelihood values create more sparse, generative patterns
+- Combine with delay for evolving, probabilistic textures
 
 ## Technical Details
 
 - **Plugin Type**: MIDI Effect
-- **Parameter**: Wait For (ms)
-  - Range: 0-10000 ms
-  - Step Size: 50 ms
-  - Default: 0 ms
-- **MIDI Processing**: Sample-accurate delay using priority queue
+- **Parameters**:
+  - **Wait For (ms)**
+    - Range: 0-10000 ms
+    - Step Size: 50 ms
+    - Default: 0 ms
+  - **Likelihood (%)**
+    - Range: 0-100%
+    - Step Size: 1%
+    - Default: 100%
+- **MIDI Processing**:
+  - Probabilistic filtering using Mersenne Twister RNG
+  - Sample-accurate delay using priority queue
 - **Formats**: VST3, AU, Standalone
 
 ## Project Structure
@@ -98,9 +120,10 @@ The plugin is built using the JUCE framework, which is automatically downloaded 
 
 ### Key Components
 
-- **PluginProcessor**: Handles MIDI event buffering and delay processing
-- **PluginEditor**: Provides the UI with a rotary knob control
+- **PluginProcessor**: Handles MIDI event buffering, probabilistic filtering, and delay processing
+- **PluginEditor**: Provides the UI with dual rotary knob controls
 - **Parameter System**: Uses JUCE's AudioProcessorValueTreeState for state management
+- **Random Engine**: Mersenne Twister (std::mt19937) for high-quality random number generation
 
 ## License
 
