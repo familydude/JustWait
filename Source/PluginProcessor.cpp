@@ -47,6 +47,15 @@ juce::AudioProcessorValueTreeState::ParameterLayout JustWaitAudioProcessor::crea
         100.0f                                       // default value (100% = all notes pass)
     ));
 
+    // Max Polyphony parameter: 1-128 notes
+    layout.add(std::make_unique<juce::AudioParameterInt>(
+        "maxPolyphony",                              // parameter ID
+        "Max Notes",                                 // parameter name
+        1,                                           // min value
+        128,                                         // max value
+        128                                          // default value (128 = unlimited)
+    ));
+
     return layout;
 }
 
@@ -112,6 +121,9 @@ void JustWaitAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
     // Clear any pending delayed events
     while (!delayedEvents.empty())
         delayedEvents.pop();
+
+    // Clear active notes tracking
+    activeNotes.clear();
 }
 
 void JustWaitAudioProcessor::releaseResources()
@@ -119,6 +131,9 @@ void JustWaitAudioProcessor::releaseResources()
     // Clear delayed events when audio processing stops
     while (!delayedEvents.empty())
         delayedEvents.pop();
+
+    // Clear active notes tracking
+    activeNotes.clear();
 }
 
 bool JustWaitAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
@@ -138,6 +153,7 @@ void JustWaitAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     // Get parameter values
     auto waitMs = apvts.getRawParameterValue("waitMs")->load();
     auto likelihood = apvts.getRawParameterValue("likelihood")->load();
+    auto maxPolyphony = apvts.getRawParameterValue("maxPolyphony")->load();
 
     // Convert wait time to samples
     auto delaySamples = static_cast<juce::int64>(waitMs * currentSampleRate / 1000.0);
@@ -149,13 +165,35 @@ void JustWaitAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     for (const auto metadata : midiMessages)
     {
         auto message = metadata.getMessage();
+        bool shouldProcess = false;
 
-        // Apply probabilistic filtering
-        // Generate random number between 0 and 1
-        float randomValue = distribution(randomGenerator);
+        // Check if this is a note-on or note-off
+        if (message.isNoteOn())
+        {
+            // Check polyphony limit for note-ons
+            if (static_cast<int>(activeNotes.size()) < maxPolyphony)
+            {
+                // Apply probabilistic filtering
+                float randomValue = distribution(randomGenerator);
+                shouldProcess = (randomValue <= likelihoodNormalized);
+            }
+            // If at max polyphony, drop the note (shouldProcess remains false)
+        }
+        else if (message.isNoteOff())
+        {
+            // Always allow note-offs through (they turn off playing notes)
+            // Apply likelihood filter to note-offs too for consistency
+            float randomValue = distribution(randomGenerator);
+            shouldProcess = (randomValue <= likelihoodNormalized);
+        }
+        else
+        {
+            // For non-note messages (CC, pitch bend, etc.), apply likelihood filter
+            float randomValue = distribution(randomGenerator);
+            shouldProcess = (randomValue <= likelihoodNormalized);
+        }
 
-        // Only process the event if random value is less than likelihood
-        if (randomValue <= likelihoodNormalized)
+        if (shouldProcess)
         {
             auto samplePosition = currentSamplePosition + metadata.samplePosition;
             auto scheduledSample = samplePosition + delaySamples;
@@ -182,6 +220,18 @@ void JustWaitAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
 
         // Add the delayed event to the output MIDI buffer
         midiMessages.addEvent(event.message, sampleInBlock);
+
+        // Track active notes for polyphony limiting
+        if (event.message.isNoteOn())
+        {
+            int noteKey = makeNoteKey(event.message.getChannel(), event.message.getNoteNumber());
+            activeNotes.insert(noteKey);
+        }
+        else if (event.message.isNoteOff())
+        {
+            int noteKey = makeNoteKey(event.message.getChannel(), event.message.getNoteNumber());
+            activeNotes.erase(noteKey);
+        }
 
         // Remove the event from the queue
         delayedEvents.pop();

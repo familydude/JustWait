@@ -30,9 +30,14 @@ private:
     juce::Label likelihoodLabel;
     juce::Label likelihoodValueLabel;
 
+    juce::Slider maxPolyphonySlider;
+    juce::Label maxPolyphonyLabel;
+    juce::Label maxPolyphonyValueLabel;
+
     // Parameter attachments
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> waitMsAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> likelihoodAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> maxPolyphonyAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JustWaitAudioProcessorEditor)
 };

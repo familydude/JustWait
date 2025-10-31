@@ -41,12 +41,33 @@ JustWaitAudioProcessorEditor::JustWaitAudioProcessorEditor (JustWaitAudioProcess
     likelihoodValueLabel.setFont(juce::Font(14.0f));
     addAndMakeVisible(likelihoodValueLabel);
 
+    // Set up the max polyphony slider (knob)
+    maxPolyphonySlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    maxPolyphonySlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    maxPolyphonySlider.setPopupDisplayEnabled(true, true, this);
+    maxPolyphonySlider.setTextValueSuffix(" notes");
+    addAndMakeVisible(maxPolyphonySlider);
+
+    // Set up the max polyphony label
+    maxPolyphonyLabel.setText("Max Notes", juce::dontSendNotification);
+    maxPolyphonyLabel.setJustificationType(juce::Justification::centred);
+    maxPolyphonyLabel.setFont(juce::Font(18.0f, juce::Font::bold));
+    addAndMakeVisible(maxPolyphonyLabel);
+
+    // Set up the max polyphony value label
+    maxPolyphonyValueLabel.setJustificationType(juce::Justification::centred);
+    maxPolyphonyValueLabel.setFont(juce::Font(14.0f));
+    addAndMakeVisible(maxPolyphonyValueLabel);
+
     // Attach sliders to parameters
     waitMsAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.apvts, "waitMs", waitMsSlider);
 
     likelihoodAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.apvts, "likelihood", likelihoodSlider);
+
+    maxPolyphonyAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.apvts, "maxPolyphony", maxPolyphonySlider);
 
     // Update wait time value label when slider changes
     waitMsSlider.onValueChange = [this]()
@@ -74,12 +95,28 @@ JustWaitAudioProcessorEditor::JustWaitAudioProcessorEditor (JustWaitAudioProcess
                                       juce::dontSendNotification);
     };
 
+    // Update max polyphony value label when slider changes
+    maxPolyphonySlider.onValueChange = [this]()
+    {
+        auto value = static_cast<int>(maxPolyphonySlider.getValue());
+        if (value >= 128)
+        {
+            maxPolyphonyValueLabel.setText("Unlimited", juce::dontSendNotification);
+        }
+        else
+        {
+            maxPolyphonyValueLabel.setText(juce::String(value) + " notes",
+                                            juce::dontSendNotification);
+        }
+    };
+
     // Set initial value displays
     waitMsSlider.onValueChange();
     likelihoodSlider.onValueChange();
+    maxPolyphonySlider.onValueChange();
 
-    // Set editor size (wider to accommodate two knobs)
-    setSize (500, 300);
+    // Set editor size (wider to accommodate three knobs)
+    setSize (700, 300);
 }
 
 JustWaitAudioProcessorEditor::~JustWaitAudioProcessorEditor()
@@ -116,11 +153,13 @@ void JustWaitAudioProcessorEditor::resized()
     // Layout components
     auto labelHeight = 25;
     auto valueLabelHeight = 20;
-    auto knobSize = 140;
+    auto knobSize = 130;
     auto spacing = 10;
 
-    // Split the area into two columns
-    auto leftColumn = bounds.removeFromLeft(bounds.getWidth() / 2);
+    // Split the area into three columns
+    auto columnWidth = bounds.getWidth() / 3;
+    auto leftColumn = bounds.removeFromLeft(columnWidth);
+    auto middleColumn = bounds.removeFromLeft(columnWidth);
     auto rightColumn = bounds;
 
     // Layout Wait For knob (left column)
@@ -135,15 +174,27 @@ void JustWaitAudioProcessorEditor::resized()
     leftColumn.removeFromTop(spacing);
     waitMsValueLabel.setBounds(leftColumn.removeFromTop(valueLabelHeight));
 
-    // Layout Likelihood knob (right column)
-    rightColumn.removeFromTop(spacing);
-    likelihoodLabel.setBounds(rightColumn.removeFromTop(labelHeight));
-    rightColumn.removeFromTop(spacing);
+    // Layout Likelihood knob (middle column)
+    middleColumn.removeFromTop(spacing);
+    likelihoodLabel.setBounds(middleColumn.removeFromTop(labelHeight));
+    middleColumn.removeFromTop(spacing);
 
-    auto likelihoodKnobBounds = rightColumn.removeFromTop(knobSize);
+    auto likelihoodKnobBounds = middleColumn.removeFromTop(knobSize);
     likelihoodKnobBounds = likelihoodKnobBounds.withSizeKeepingCentre(knobSize, knobSize);
     likelihoodSlider.setBounds(likelihoodKnobBounds);
 
+    middleColumn.removeFromTop(spacing);
+    likelihoodValueLabel.setBounds(middleColumn.removeFromTop(valueLabelHeight));
+
+    // Layout Max Polyphony knob (right column)
     rightColumn.removeFromTop(spacing);
-    likelihoodValueLabel.setBounds(rightColumn.removeFromTop(valueLabelHeight));
+    maxPolyphonyLabel.setBounds(rightColumn.removeFromTop(labelHeight));
+    rightColumn.removeFromTop(spacing);
+
+    auto maxPolyphonyKnobBounds = rightColumn.removeFromTop(knobSize);
+    maxPolyphonyKnobBounds = maxPolyphonyKnobBounds.withSizeKeepingCentre(knobSize, knobSize);
+    maxPolyphonySlider.setBounds(maxPolyphonyKnobBounds);
+
+    rightColumn.removeFromTop(spacing);
+    maxPolyphonyValueLabel.setBounds(rightColumn.removeFromTop(valueLabelHeight));
 }

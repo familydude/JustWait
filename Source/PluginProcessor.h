@@ -3,6 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <queue>
 #include <random>
+#include <set>
 
 //==============================================================================
 /**
@@ -78,6 +79,16 @@ private:
     // Random number generation for likelihood
     std::mt19937 randomGenerator;
     std::uniform_real_distribution<float> distribution;
+
+    // Polyphony tracking
+    // Stores active notes as (channel << 8) | noteNumber
+    std::set<int> activeNotes;
+
+    // Helper method to create note key from channel and note number
+    inline int makeNoteKey(int channel, int noteNumber) const
+    {
+        return (channel << 8) | noteNumber;
+    }
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JustWaitAudioProcessor)
 };
